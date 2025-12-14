@@ -1,0 +1,329 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PROJECT_MANAGER
+  QC
+  WIS
+}
+
+enum DefectStatus {
+  OPEN
+  IN_PROGRESS
+  FIXED
+  RESOLVED
+  CLOSED
+  REOPENED
+  DEFERRED
+  OUT_OF_SCOPE
+}
+
+enum DefectSource {
+  PEER_REVIEW
+  PM_FEEDBACK
+  STAGING_QC
+  PRE_LIVE_QC
+  POST_LIVE_QC
+}
+
+enum AuditEventType {
+  STATUS_CHANGE
+  ASSIGNMENT_CHANGE
+  COMMENT_ADDED
+  DEFECT_CREATED
+  DEFECT_UPDATED
+}
+
+enum QCPhase {
+  Staging
+  PreLive
+  PostLive
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  role      Role     @default(WIS)
+  isActive  Boolean  @default(true)
+  email     String?
+  fullName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  assignedDefects     Defect[]           @relation("AssignedTo")
+  createdDefects      Defect[]           @relation("CreatedBy")
+  comments            Comment[]
+  auditEvents         AuditEvent[]
+  uploadedAttachments Attachment[]
+  defectAssignments   DefectAssignee[]   // Multi-assignee for global defects
+  globalDefectChats   GlobalDefectChat[] // Chat messages in global defects
+}
+
+// PMC (Project Management Company) - stores unique PMC names for auto-suggestions
+model PMC {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Relations
+  locations   Location[]
+  defects     Defect[]
+  
+  @@index([name])
+}
+
+// Location tied to PMC for auto-suggestions
+model Location {
+  id        String   @id @default(cuid())
+  name      String
+  pmcId     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  pmc             PMC              @relation(fields: [pmcId], references: [id], onDelete: Cascade)
+  defects         Defect[]
+  defectLocations DefectLocation[] // Multi-location for global defects
+  
+  @@unique([name, pmcId])
+  @@index([pmcId])
+  @@index([name])
+}
+
+model Defect {
+  id           String       @id @default(cuid())
+  title        String
+  description  String
+  status       DefectStatus @default(OPEN)
+  source       DefectSource @default(STAGING_QC)
+  priority     Int          @default(3) // 1 = Critical, 2 = High, 3 = Medium, 4 = Low
+  pmcId        String?
+  pmcName      String       // PMC name as text field
+  locationId   String?
+  locationName String?      // Primary location name as text field
+  isGlobal     Boolean      @default(false) // True if defect has multiple locations
+  assignedToId String?      // Primary assignee (for backward compatibility)
+  createdById  String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  
+  // Relations
+  pmc              PMC?              @relation(fields: [pmcId], references: [id])
+  location         Location?         @relation(fields: [locationId], references: [id])
+  assignedTo       User?             @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy        User              @relation("CreatedBy", fields: [createdById], references: [id])
+  comments         Comment[]
+  attachments      Attachment[]
+  auditEvents      AuditEvent[]
+  qcValues         DefectQCValue[]
+  defectLocations  DefectLocation[]  // Multiple locations for global defects
+  defectAssignees  DefectAssignee[]  // Multiple assignees for global defects
+  globalChats      GlobalDefectChat[] // Collaboration chat for global defects
+  
+  @@index([pmcId])
+  @@index([locationId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([source])
+  @@index([pmcName])
+  @@index([isGlobal])
+}
+
+// Junction table for multiple locations per defect (global defects)
+model DefectLocation {
+  id           String   @id @default(cuid())
+  defectId     String
+  locationName String
+  locationId   String?
+  createdAt    DateTime @default(now())
+  
+  // Relations
+  defect   Defect    @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id])
+  
+  @@unique([defectId, locationName])
+  @@index([defectId])
+  @@index([locationId])
+}
+
+// Junction table for multiple assignees per defect (global defects)
+model DefectAssignee {
+  id        String   @id @default(cuid())
+  defectId  String
+  userId    String
+  createdAt DateTime @default(now())
+  
+  // Relations
+  defect Defect @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+  
+  @@unique([defectId, userId])
+  @@index([defectId])
+  @@index([userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  defectId  String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  defect Defect @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+  
+  @@index([defectId])
+}
+
+model Attachment {
+  id          String   @id @default(cuid())
+  filename    String
+  fileKey     String   @unique // S3 key or storage identifier
+  fileSize    Int      // in bytes
+  mimeType    String
+  defectId    String
+  uploadedById String
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  defect      Defect   @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  uploadedBy  User     @relation(fields: [uploadedById], references: [id])
+  
+  @@index([defectId])
+}
+
+model AuditEvent {
+  id        String         @id @default(cuid())
+  type      AuditEventType
+  defectId  String
+  userId    String
+  oldValue  String?        // JSON string for old value
+  newValue  String?        // JSON string for new value
+  metadata  String?        // Additional JSON metadata
+  createdAt DateTime       @default(now())
+  
+  // Relations
+  defect Defect @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+  
+  @@index([defectId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model QCParameter {
+  id           String   @id @default(cuid())
+  parameterKey String
+  parameterLabel String
+  dataType     String   // string, number, boolean, enum, date
+  enumValues   String?  // JSON array for enum type
+  required     Boolean  @default(false)
+  defaultValue String?
+  phase        QCPhase
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  defectValues DefectQCValue[]
+  
+  @@unique([parameterKey, phase, version])
+  @@index([phase])
+  @@index([parameterKey])
+}
+
+model DefectQCValue {
+  id            String   @id @default(cuid())
+  defectId      String
+  parameterId   String
+  value         String?  // JSON string for complex types
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  defect        Defect      @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  parameter     QCParameter @relation(fields: [parameterId], references: [id], onDelete: Cascade)
+  
+  @@unique([defectId, parameterId])
+  @@index([defectId])
+  @@index([parameterId])
+}
+
+model MLInsight {
+  id            String   @id @default(cuid())
+  scope         String   // global, team, user
+  userId        String?
+  teamId        String?
+  reopenRate    Float
+  meanTimeToFix Float   // in hours
+  distributions Json     // status, priority, project distributions
+  clustering    Json     // cluster information
+  generatedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  
+  @@index([scope])
+  @@index([userId])
+  @@index([teamId])
+  @@index([generatedAt])
+}
+
+// AI-generated suggestions for users on reducing defects
+model AISuggestion {
+  id            String   @id @default(cuid())
+  userId        String?  // null for global/admin suggestions
+  role          Role?    // Role-specific suggestions
+  suggestion    String   // The AI-generated suggestion text
+  category      String   // Category: "prevention", "process", "quality", "training"
+  priority      Int      @default(1) // 1 = High priority, 2 = Medium, 3 = Low
+  basedOnCount  Int      // Number of defects this suggestion is based on
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([role])
+  @@index([isActive])
+}
+
+// Chat messages for global defect collaboration
+model GlobalDefectChat {
+  id              String   @id @default(cuid())
+  defectId        String
+  userId          String
+  originalMessage String   // Original message from user
+  refinedMessage  String   // Professionally refined message
+  messageType     GlobalChatType @default(MESSAGE)
+  isRead          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  defect  Defect @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id])
+  
+  @@index([defectId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum GlobalChatType {
+  MESSAGE        // Regular chat message
+  STATUS_UPDATE  // User started/stopped working
+  NOTIFICATION   // System notification
+}
+

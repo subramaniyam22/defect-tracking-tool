@@ -1,0 +1,24 @@
+{
+  "name": "defect-tracking-tool",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:backend && npm run test:e2e",
+    "test:backend": "cd backend && npm test",
+    "test:e2e": "cd e2e && npm test",
+    "test:e2e:ui": "cd e2e && npm run test:ui"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
