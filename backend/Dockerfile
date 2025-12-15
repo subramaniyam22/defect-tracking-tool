@@ -6,49 +6,46 @@ WORKDIR /app
 # Install OpenSSL for Prisma
 RUN apk add --no-cache openssl
 
-# Copy package files
+# Copy package files AND prisma FIRST (before npm install, needed for postinstall)
 COPY package.json ./
 COPY tsconfig.json ./
 COPY nest-cli.json ./
+COPY prisma ./prisma/
 
-# Install dependencies
+# Install dependencies (postinstall will run prisma generate)
 RUN npm install
 
-# Copy Prisma and generate client
-COPY prisma ./prisma/
-RUN npx prisma generate
-
-# Copy source code
+# Copy source code AFTER npm install
 COPY src ./src/
 
-# Build - show what we're building
-RUN echo "=== Source files ===" && ls -la src/
-RUN echo "=== Building NestJS ===" && npm run build 2>&1
-RUN echo "=== Build output ===" && ls -la dist/ && ls -la dist/src/ 2>/dev/null || echo "No dist/src/"
+# Build NestJS
+RUN echo "=== Building ===" && npm run build 2>&1
 
-# Production stage
+# Show build output
+RUN echo "=== Dist contents ===" && find dist -type f | head -30
+
+# Production stage  
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
 RUN apk add --no-cache openssl
 
-# Copy package.json and install prod deps
+# Copy package.json and prisma first
 COPY package.json ./
 COPY prisma ./prisma/
 
-# Install without postinstall to avoid prisma generate issues
-RUN npm install --omit=dev --ignore-scripts
-RUN npx prisma generate
+# Install prod deps (postinstall will run prisma generate)
+RUN npm install --omit=dev
 
-# Copy built files from builder
+# Copy built files
 COPY --from=builder /app/dist ./dist
 
-# Verify dist contents
-RUN echo "=== Final dist ===" && ls -la dist/ && find dist -name "main.js" 2>/dev/null || echo "main.js not found"
+# Show what we have
+RUN echo "=== Final dist ===" && find dist -name "*.js" | head -20
 
 EXPOSE 3000
 ENV NODE_ENV=production
 
-# Try to find and run main.js
-CMD ["sh", "-c", "MAIN=$(find dist -name 'main.js' | head -1); if [ -n \"$MAIN\" ]; then echo \"Starting: $MAIN\" && node $MAIN; else echo 'ERROR: main.js not found' && find dist -type f && exit 1; fi"]
+# Start the app
+CMD ["node", "dist/main.js"]
