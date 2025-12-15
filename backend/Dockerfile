@@ -6,53 +6,49 @@ WORKDIR /app
 # Install OpenSSL for Prisma
 RUN apk add --no-cache openssl
 
-# Copy ALL necessary files first
+# Copy package files
 COPY package.json ./
 COPY tsconfig.json ./
 COPY nest-cli.json ./
-COPY prisma ./prisma/
-COPY src ./src/
 
-# Install all dependencies (including dev)
+# Install dependencies
 RUN npm install
 
-# Generate Prisma client
+# Copy Prisma and generate client
+COPY prisma ./prisma/
 RUN npx prisma generate
 
-# Debug: Show what we have
-RUN echo "=== Source files ===" && find src -name "*.ts" | head -20
+# Copy source code
+COPY src ./src/
 
-# Build the application
-RUN npm run build && echo "Build completed"
-
-# Debug: Show build output
-RUN echo "=== Dist contents ===" && find dist -type f | head -20
+# Build - show what we're building
+RUN echo "=== Source files ===" && ls -la src/
+RUN echo "=== Building NestJS ===" && npm run build 2>&1
+RUN echo "=== Build output ===" && ls -la dist/ && ls -la dist/src/ 2>/dev/null || echo "No dist/src/"
 
 # Production stage
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install OpenSSL for Prisma runtime
 RUN apk add --no-cache openssl
 
-# Copy package files AND prisma folder
+# Copy package.json and install prod deps
 COPY package.json ./
 COPY prisma ./prisma/
 
-# Install production dependencies
-RUN npm install --omit=dev
+# Install without postinstall to avoid prisma generate issues
+RUN npm install --omit=dev --ignore-scripts
+RUN npx prisma generate
 
-# Copy built application from builder
+# Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
-# Debug: Verify main.js exists
-RUN ls -la dist/ && ls -la dist/src/ || echo "dist/src not found"
+# Verify dist contents
+RUN echo "=== Final dist ===" && ls -la dist/ && find dist -name "main.js" 2>/dev/null || echo "main.js not found"
 
-# Expose port
 EXPOSE 3000
-
 ENV NODE_ENV=production
 
-# Start command - try both possible locations
-CMD ["sh", "-c", "if [ -f dist/main.js ]; then node dist/main.js; elif [ -f dist/src/main.js ]; then node dist/src/main.js; else echo 'main.js not found' && ls -R dist/; fi"]
+# Try to find and run main.js
+CMD ["sh", "-c", "MAIN=$(find dist -name 'main.js' | head -1); if [ -n \"$MAIN\" ]; then echo \"Starting: $MAIN\" && node $MAIN; else echo 'ERROR: main.js not found' && find dist -type f && exit 1; fi"]
