@@ -6,11 +6,11 @@ WORKDIR /app
 # Install OpenSSL for Prisma
 RUN apk add --no-cache openssl
 
-# Copy package files
+# Copy package files AND prisma folder FIRST (before npm install)
 COPY package.json ./
 COPY prisma ./prisma/
 
-# Install all dependencies (including dev) - use npm install since no lock file
+# Install all dependencies (including dev)
 RUN npm install
 
 # Generate Prisma client
@@ -30,13 +30,12 @@ WORKDIR /app
 # Install OpenSSL for Prisma runtime
 RUN apk add --no-cache openssl
 
-# Copy package files and install production dependencies
+# Copy package files AND prisma folder FIRST (needed for postinstall script)
 COPY package.json ./
-RUN npm install --omit=dev
-
-# Copy Prisma schema and generate client in production
 COPY prisma ./prisma/
-RUN npx prisma generate
+
+# Install production dependencies (postinstall will run prisma generate)
+RUN npm install --omit=dev
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
@@ -48,4 +47,4 @@ EXPOSE 3000
 ENV NODE_ENV=production
 
 # Run migrations and start the application
-CMD npx prisma migrate deploy && node dist/main.js
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
