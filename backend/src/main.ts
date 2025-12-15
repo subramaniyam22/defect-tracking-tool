@@ -39,9 +39,31 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
   
+  // CORS configuration - allow frontend URLs
+  const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:3001',
+    'http://localhost:3000',
+  ].filter(Boolean);
+  
+  console.log('CORS allowed origins:', allowedOrigins);
+  
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list or is a Railway app
+      if (allowedOrigins.includes(origin) || origin.endsWith('.up.railway.app')) {
+        return callback(null, true);
+      }
+      
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
   
   app.useGlobalPipes(
