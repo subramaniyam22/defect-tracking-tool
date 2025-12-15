@@ -3,6 +3,15 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  // Debug: Log environment variables (masked for security)
+  const dbUrl = process.env.DATABASE_URL;
+  console.log('=== Environment Debug ===');
+  console.log('DATABASE_URL exists:', !!dbUrl);
+  console.log('DATABASE_URL length:', dbUrl?.length || 0);
+  console.log('DATABASE_URL starts with:', dbUrl?.substring(0, 15) || 'UNDEFINED');
+  console.log('All env vars with DB:', Object.keys(process.env).filter(k => k.includes('DATABASE') || k.includes('PG')));
+  console.log('=========================');
+
   const app = await NestFactory.create(AppModule);
   
   app.enableCors({
