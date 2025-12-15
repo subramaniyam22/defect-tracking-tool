@@ -19,8 +19,14 @@ RUN npx prisma generate
 # Copy source code
 COPY . .
 
+# List files to debug
+RUN echo "=== Files in /app ===" && ls -la
+
 # Build the application
 RUN npm run build
+
+# Verify build output exists
+RUN echo "=== Files in /app/dist ===" && ls -la dist/
 
 # Production stage
 FROM node:20-alpine AS production
@@ -39,6 +45,9 @@ RUN npm install --omit=dev
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
+
+# Verify dist was copied
+RUN echo "=== Production dist ===" && ls -la dist/
 
 # Expose port
 EXPOSE 3000
