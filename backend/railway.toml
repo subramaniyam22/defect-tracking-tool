@@ -1,6 +1,4 @@
 [deploy]
-startCommand = "echo 'Starting prisma db push...' && npx prisma db push --accept-data-loss && echo 'DB push done, starting node...' && ls -la dist/ && node dist/main.js"
-healthcheckPath = "/health/liveness"
-healthcheckTimeout = 300
+startCommand = "node dist/main.js"
 restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 5
+restartPolicyMaxRetries = 3
