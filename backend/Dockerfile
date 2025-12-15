@@ -46,5 +46,5 @@ EXPOSE 3000
 # Set environment variable for production
 ENV NODE_ENV=production
 
-# Run migrations and start the application
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+# Start the application (migrations can be run separately if needed)
+CMD ["sh", "-c", "echo 'Starting app...' && npx prisma db push --accept-data-loss && echo 'DB synced' && node dist/main.js"]

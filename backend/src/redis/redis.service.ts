@@ -32,8 +32,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     this.client.on('error', (err) => console.error('Redis Client Error', err));
     
-    await this.client.connect();
-    console.log('Redis connected successfully');
+    try {
+      // Add timeout for connection
+      const connectPromise = this.client.connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Redis connection timeout')), 10000)
+      );
+      
+      await Promise.race([connectPromise, timeoutPromise]);
+      console.log('Redis connected successfully');
+    } catch (error) {
+      console.error('Redis connection failed:', error.message);
+      console.log('App will continue without Redis caching');
+      // Don't throw - app can work without Redis for basic functionality
+    }
   }
 
   async onModuleDestroy() {
