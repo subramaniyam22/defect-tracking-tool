@@ -46,5 +46,5 @@ EXPOSE 3000
 # Set environment variable for production
 ENV NODE_ENV=production
 
-# Start the application (migrations can be run separately if needed)
-CMD ["sh", "-c", "echo 'Starting app...' && npx prisma db push --accept-data-loss && echo 'DB synced' && node dist/main.js"]
+# Default start command (can be overridden by railway.toml)
+CMD ["node", "dist/main.js"]
