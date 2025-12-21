@@ -44,7 +44,7 @@ services:
     region: oregon
     plan: free # Use 'starter' for production
     rootDir: ml-service
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeploy: true
