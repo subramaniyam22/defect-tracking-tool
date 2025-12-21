@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Note: 'standalone' output removed - Railway handles deployment without it
+  // Use standalone output for better production deployment
+  output: 'standalone',
   // Allow images from any domain (for user uploads)
   images: {
     remotePatterns: [
@@ -14,6 +15,10 @@ const nextConfig = {
         hostname: 'localhost',
       },
     ],
+  },
+  // Environment variables available at build time
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
   },
 }
 

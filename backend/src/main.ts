@@ -33,8 +33,13 @@ async function bootstrap() {
       // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
       
-      // Check if origin is in allowed list or is a Railway app
-      if (allowedOrigins.includes(origin) || origin.endsWith('.up.railway.app')) {
+      // Check if origin is in allowed list or is a hosted app (Railway, Render, Vercel)
+      if (
+        allowedOrigins.includes(origin) || 
+        origin.endsWith('.up.railway.app') ||
+        origin.endsWith('.onrender.com') ||
+        origin.endsWith('.vercel.app')
+      ) {
         return callback(null, true);
       }
       

@@ -25,6 +25,9 @@ app.add_middleware(
 
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3000")
+# Ensure HTTPS in production
+if BACKEND_URL and not BACKEND_URL.startswith("http"):
+    BACKEND_URL = f"https://{BACKEND_URL}"
 BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "")
 
 logging.basicConfig(level=logging.INFO)
