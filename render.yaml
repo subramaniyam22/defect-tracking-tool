@@ -19,7 +19,7 @@ services:
     region: oregon
     plan: free # Use 'starter' for production
     rootDir: backend
-    buildCommand: npm install && npx prisma generate && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npx prisma migrate deploy && npm run start:prod
     healthCheckPath: /health
     autoDeploy: true
