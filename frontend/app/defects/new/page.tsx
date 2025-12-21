@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import apiClient from '@/lib/api';
-import { authService } from '@/lib/auth';
-import Navbar from '@/components/Navbar';
+import apiClient from '../../../lib/api';
+import { authService } from '../../../lib/auth';
+import Navbar from '../../../components/Navbar';
 
 interface User {
   id: string;

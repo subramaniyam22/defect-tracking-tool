@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { authService } from '@/lib/auth';
+import { authService } from '../lib/auth';
 
 interface NavbarProps {
   user: {

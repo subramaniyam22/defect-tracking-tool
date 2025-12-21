@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import apiClient from '@/lib/api';
-import { authService } from '@/lib/auth';
-import AIRecommendationPanel from '@/components/AIRecommendationPanel';
-import Navbar from '@/components/Navbar';
+import apiClient from '../../../lib/api';
+import { authService } from '../../../lib/auth';
+import AIRecommendationPanel from '../../../components/AIRecommendationPanel';
+import Navbar from '../../../components/Navbar';
 
 interface DefectLocation {
   id: string;

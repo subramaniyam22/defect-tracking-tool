@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import apiClient from '@/lib/api';
-import { authService } from '@/lib/auth';
-import Navbar from '@/components/Navbar';
+import apiClient from '../../lib/api';
+import { authService } from '../../lib/auth';
+import Navbar from '../../components/Navbar';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 

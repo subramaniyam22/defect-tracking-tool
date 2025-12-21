@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import apiClient from '@/lib/api';
+import apiClient from '../lib/api';
 
 interface AIRecommendation {
   root_cause_hypotheses: string[];

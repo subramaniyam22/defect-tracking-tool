@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import apiClient from '@/lib/api';
-import { authService } from '@/lib/auth';
-import Navbar from '@/components/Navbar';
+import apiClient from '../../lib/api';
+import { authService } from '../../lib/auth';
+import Navbar from '../../components/Navbar';
 
 interface User {
   id: string;

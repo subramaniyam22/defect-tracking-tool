@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { authService } from '@/lib/auth';
-import apiClient from '@/lib/api';
-import FilterBar, { FilterValues } from '@/components/FilterBar';
-import Navbar from '@/components/Navbar';
+import { authService } from '../../lib/auth';
+import apiClient from '../../lib/api';
+import FilterBar, { FilterValues } from '../../components/FilterBar';
+import Navbar from '../../components/Navbar';
 
 // Dynamically import ECharts to avoid SSR issues
 const ReactECharts = dynamic(
