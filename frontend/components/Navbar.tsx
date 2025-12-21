@@ -77,6 +77,11 @@ export default function Navbar({ user }: NavbarProps) {
               <Link href="/upload-qc" className={linkClass('/upload-qc')}>
                 Upload QC
               </Link>
+              {(user?.role === 'ADMIN' || user?.role === 'PROJECT_MANAGER') && (
+                <Link href="/import-defects" className={linkClass('/import-defects')}>
+                  🧠 AI Training
+                </Link>
+              )}
               {user?.role === 'ADMIN' && (
                 <Link href="/admin" className={linkClass('/admin')}>
                   Admin
@@ -141,6 +146,11 @@ export default function Navbar({ user }: NavbarProps) {
           <Link href="/upload-qc" className={`whitespace-nowrap text-sm ${linkClass('/upload-qc')}`}>
             Upload QC
           </Link>
+          {(user?.role === 'ADMIN' || user?.role === 'PROJECT_MANAGER') && (
+            <Link href="/import-defects" className={`whitespace-nowrap text-sm ${linkClass('/import-defects')}`}>
+              🧠 AI Training
+            </Link>
+          )}
           {user?.role === 'ADMIN' && (
             <Link href="/admin" className={`whitespace-nowrap text-sm ${linkClass('/admin')}`}>
               Admin

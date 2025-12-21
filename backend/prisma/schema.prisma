@@ -328,3 +328,97 @@ enum GlobalChatType {
   NOTIFICATION   // System notification
 }
 
+// Defect Training Data - Historical defect data imported for AI/ML training
+model DefectTrainingData {
+  id              String   @id @default(cuid())
+  sourceType      TrainingDataSource  // WIS_QC, PM_FEEDBACK, STAGING
+  
+  // Common fields mapped from all sources
+  date            DateTime?
+  pmcName         String?
+  locationName    String?
+  pageName        String?
+  defectType      String?
+  feedbackText    String   @db.Text
+  category        String?
+  subCategory     String?
+  
+  // Source-specific fields stored as JSON
+  rawData         Json     // Original row data for reference
+  
+  // Team member info
+  usTeamMember    String?
+  inTeamMember    String?
+  pmName          String?
+  qcName          String?
+  fixedBy         String?
+  
+  // Additional context
+  buildPhase      String?
+  reviewStage     String?
+  status          String?
+  priority        String?
+  trainingNeeded  Boolean  @default(false)
+  scopeType       String?
+  screenshotUrl   String?
+  
+  // AI/ML processing fields
+  processedAt     DateTime?
+  patternId       String?  // Links to identified pattern
+  sentiment       Float?   // Sentiment score from text analysis
+  keywords        String[] // Extracted keywords for clustering
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  pattern         DefectPattern? @relation(fields: [patternId], references: [id])
+  
+  @@index([sourceType])
+  @@index([pmcName])
+  @@index([category])
+  @@index([defectType])
+  @@index([date])
+  @@index([patternId])
+}
+
+enum TrainingDataSource {
+  WIS_QC
+  PM_FEEDBACK
+  STAGING
+}
+
+// Identified patterns from training data for AI suggestions
+model DefectPattern {
+  id              String   @id @default(cuid())
+  patternName     String
+  description     String   @db.Text
+  sourceTypes     TrainingDataSource[]
+  
+  // Pattern metrics
+  occurrenceCount Int      @default(0)
+  avgResolutionDays Float?
+  reopenRate      Float?
+  
+  // Common characteristics
+  commonCategories String[]
+  commonDefectTypes String[]
+  commonPMCs      String[]
+  commonKeywords  String[]
+  
+  // AI-generated insights
+  rootCauses      String[] // Identified root causes
+  preventionTips  String[] // How to prevent this pattern
+  resolutionSteps String[] // Recommended fix steps
+  
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  trainingData    DefectTrainingData[]
+  
+  @@index([patternName])
+  @@index([isActive])
+}
+

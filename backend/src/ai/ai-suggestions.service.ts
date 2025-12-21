@@ -11,6 +11,7 @@ interface DefectStats {
   avgResolutionDays: number;
 }
 
+
 @Injectable()
 export class AISuggestionsService {
   constructor(private prisma: PrismaService) {}
@@ -189,6 +190,10 @@ export class AISuggestionsService {
       );
     }
 
+    // Add pattern-based suggestions from training data
+    const patternSuggestions = await this.getPatternBasedSuggestions();
+    suggestions.push(...patternSuggestions);
+
     // Add general best practices if we have few suggestions
     if (suggestions.length < 3) {
       suggestions.push(
@@ -198,7 +203,63 @@ export class AISuggestionsService {
       );
     }
 
-    return suggestions.slice(0, 5); // Return top 5 suggestions
+    return suggestions.slice(0, 7); // Return top 7 suggestions for richer insights
+  }
+
+  // Get suggestions based on learned patterns from training data
+  private async getPatternBasedSuggestions(): Promise<string[]> {
+    const suggestions: string[] = [];
+
+    try {
+      // Get top patterns from training data
+      const patterns = await this.prisma.defectPattern.findMany({
+        where: { isActive: true },
+        orderBy: { occurrenceCount: 'desc' },
+        take: 3,
+      });
+
+      for (const pattern of patterns) {
+        if (pattern.preventionTips.length > 0 && pattern.occurrenceCount >= 3) {
+          suggestions.push(
+            `📊 Pattern Alert [${pattern.patternName}]: ${pattern.preventionTips[0]} (${pattern.occurrenceCount} occurrences detected)`
+          );
+        }
+      }
+
+      // Check for training needs
+      const trainingNeededCount = await this.prisma.defectTrainingData.count({
+        where: { trainingNeeded: true },
+      });
+
+      if (trainingNeededCount > 3) {
+        suggestions.push(
+          `📚 ${trainingNeededCount} defects marked as requiring training. Review common patterns and schedule focused training sessions.`
+        );
+      }
+
+      // Get recent high-frequency categories
+      const recentCategories = await this.prisma.defectTrainingData.groupBy({
+        by: ['category'],
+        where: {
+          date: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Last 30 days
+          category: { not: null },
+        },
+        _count: true,
+        orderBy: { _count: { category: 'desc' } },
+        take: 3,
+      });
+
+      if (recentCategories.length > 0 && recentCategories[0]._count >= 5) {
+        const topCategory = recentCategories[0].category;
+        suggestions.push(
+          `⚠️ "${topCategory}" is the most common defect category in the last 30 days with ${recentCategories[0]._count} occurrences. Focus QC efforts here.`
+        );
+      }
+    } catch (error) {
+      // Silently handle errors - patterns may not exist yet
+    }
+
+    return suggestions;
   }
 
   private getSourceLabel(source: string): string {

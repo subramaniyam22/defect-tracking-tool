@@ -16,6 +16,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { TelemetryModule } from './telemetry/telemetry.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
+import { DefectImportModule } from './defect-import/defect-import.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { CsrfInterceptor } from './common/interceptors/csrf.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -51,6 +52,7 @@ import { AppController } from './app.controller';
     HealthModule,
     MetricsModule,
     TelemetryModule,
+    DefectImportModule,
   ],
   providers: [
     {
