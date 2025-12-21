@@ -62,7 +62,7 @@ services:
     plan: free # Use 'starter' for production
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: npx next start -p $PORT
     autoDeploy: true
     envVars:
       - key: NODE_ENV
