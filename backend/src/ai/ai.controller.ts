@@ -30,7 +30,7 @@ export class AIController {
 
   // Get AI suggestions for the current user
   @Get('suggestions/me')
-  async getMySuggestions(@Request() req) {
+  async getMySuggestions(@Request() req: any) {
     const suggestions = await this.suggestionsService.getUserSuggestions(req.user.id, req.user.role);
     const summary = await this.suggestionsService.getDefectSummary(req.user.id);
     return { suggestions, summary };

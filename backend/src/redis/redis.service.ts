@@ -1,9 +1,10 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, RedisClientType } from 'redis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(RedisService.name);
   private client: RedisClientType | null = null;
   private isConnected = false;
 
@@ -12,31 +13,31 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     const redisUrl = this.configService.get<string>('REDIS_URL');
     
-    // If no Redis URL, skip Redis entirely
+    // If no Redis URL, try individual settings
     if (!redisUrl) {
-      console.log('REDIS_URL not set - Redis caching disabled');
+      this.logger.warn('REDIS_URL not set - Redis caching disabled');
       return;
     }
     
     try {
       this.client = createClient({ url: redisUrl });
       this.client.on('error', (err) => {
-        console.error('Redis Client Error:', err.message);
+        this.logger.error(`Redis Client Error: ${err.message}`);
         this.isConnected = false;
       });
       
       // Add timeout for connection
       const connectPromise = this.client.connect();
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
       );
       
       await Promise.race([connectPromise, timeoutPromise]);
       this.isConnected = true;
-      console.log('Redis connected successfully');
+      this.logger.log('Redis connected successfully');
     } catch (error) {
-      console.error('Redis connection failed:', error.message);
-      console.log('App will continue without Redis caching');
+      this.logger.error(`Redis connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      this.logger.warn('App will continue without Redis caching');
       this.client = null;
       this.isConnected = false;
     }
@@ -65,7 +66,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         await this.client.set(key, value);
       }
     } catch (e) {
-      console.error('Redis set error:', e.message);
+      this.logger.error(`Redis set error for key ${key}: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
   }
 
@@ -74,7 +75,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       return await this.client.get(key);
     } catch (e) {
-      console.error('Redis get error:', e.message);
+      this.logger.error(`Redis get error for key ${key}: ${e instanceof Error ? e.message : 'Unknown error'}`);
       return null;
     }
   }
@@ -84,7 +85,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.client.del(key);
     } catch (e) {
-      console.error('Redis del error:', e.message);
+      this.logger.error(`Redis del error for key ${key}: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
   }
 
@@ -94,7 +95,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const result = await this.client.exists(key);
       return result === 1;
     } catch (e) {
-      console.error('Redis exists error:', e.message);
+      this.logger.error(`Redis exists error for key ${key}: ${e instanceof Error ? e.message : 'Unknown error'}`);
       return false;
     }
   }
@@ -104,7 +105,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       return await this.client.ttl(key);
     } catch (e) {
-      console.error('Redis ttl error:', e.message);
+      this.logger.error(`Redis ttl error for key ${key}: ${e instanceof Error ? e.message : 'Unknown error'}`);
       return -1;
     }
   }
@@ -114,7 +115,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.client.expire(key, seconds);
     } catch (e) {
-      console.error('Redis expire error:', e.message);
+      this.logger.error(`Redis expire error for key ${key}: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
   }
 }

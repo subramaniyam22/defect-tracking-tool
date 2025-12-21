@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { AttachmentsService } from './attachments.service';
-import { CreateAttachmentDto } from './dto/create-attachment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('attachments')
@@ -23,7 +22,7 @@ export class AttachmentsController {
   @Post('presigned-upload')
   createPresignedUploadUrl(
     @Body() body: { defectId: string; filename: string; mimeType: string; fileSize: number },
-    @Request() req,
+    @Request() req: any,
   ) {
     return this.attachmentsService.createPresignedUploadUrl(
       body.defectId,
@@ -66,7 +65,7 @@ export class AttachmentsController {
   async uploadFiles(
     @Param('defectId') defectId: string,
     @UploadedFiles() files: Express.Multer.File[],
-    @Request() req,
+    @Request() req: any,
   ) {
     return this.attachmentsService.uploadFiles(defectId, files, req.user.id);
   }

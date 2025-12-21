@@ -180,12 +180,33 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Check if session still exists
-    const sessionKey = `session:${user.id}`;
-    const sessionExists = await this.redisService.exists(sessionKey);
-    
-    if (!sessionExists) {
-      throw new UnauthorizedException('Session expired');
+    // Check if user is active
+    if (!user.isActive) {
+      throw new UnauthorizedException('User account is inactive');
+    }
+
+    // Check if session still exists in Redis (if Redis is available)
+    // If Redis is not available, we still allow the request if the JWT is valid
+    try {
+      const sessionKey = `session:${user.id}`;
+      const sessionExists = await this.redisService.exists(sessionKey);
+      
+      if (!sessionExists) {
+        // Only enforce session check if Redis is actually connected
+        // If Redis is not available, we'll still allow valid JWT tokens
+        const redisClient = this.redisService.getClient();
+        if (redisClient) {
+          throw new UnauthorizedException('Session expired');
+        }
+        // Redis not available, but JWT is valid, so allow the request
+      }
+    } catch (error) {
+      // If Redis check fails but it's not a connection issue, throw the error
+      // Otherwise, allow the request if JWT is valid
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      // Redis connection issue - allow request with valid JWT
     }
 
     return user;

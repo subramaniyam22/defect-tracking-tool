@@ -29,11 +29,22 @@ export class MLController {
   @UseGuards(JwtAuthGuard)
   async generateInsights(
     @Body() dto: GenerateInsightsDto,
-    @Request() req,
+    @Request() req: any,
   ) {
-    const scope = dto?.scope || 'global';
-    const userId = scope === 'user' ? req.user.id : undefined;
-    return this.mlService.generateInsights(scope, userId);
+    try {
+      const scope = dto?.scope || 'global';
+      const userId = scope === 'user' ? (req.user?.id || undefined) : undefined;
+      
+      if (scope === 'user' && !userId) {
+        throw new Error('User ID is required for user scope insights');
+      }
+      
+      return await this.mlService.generateInsights(scope, userId);
+    } catch (error) {
+      console.error('Error in generateInsights controller:', error);
+      console.error('Stack:', error.stack);
+      throw error;
+    }
   }
 
   @Get('insights')

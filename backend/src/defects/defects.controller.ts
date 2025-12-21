@@ -39,7 +39,7 @@ export class DefectsController {
   }
 
   @Post()
-  create(@Body() createDefectDto: CreateDefectDto, @Request() req) {
+  create(@Body() createDefectDto: CreateDefectDto, @Request() req: any) {
     return this.defectsService.create(createDefectDto, req.user.id, req.user.role);
   }
 
@@ -55,7 +55,7 @@ export class DefectsController {
 
   // Get user's activity log - must be before :id route
   @Get('my-activity')
-  getMyActivity(@Request() req) {
+  getMyActivity(@Request() req: any) {
     return this.defectsService.getUserActivity(req.user.id);
   }
 
@@ -65,7 +65,7 @@ export class DefectsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDefectDto: UpdateDefectDto, @Request() req) {
+  update(@Param('id') id: string, @Body() updateDefectDto: UpdateDefectDto, @Request() req: any) {
     return this.defectsService.update(id, updateDefectDto, req.user.id, req.user.role);
   }
 
@@ -75,7 +75,7 @@ export class DefectsController {
   }
 
   @Post(':id/comments')
-  addComment(@Param('id') id: string, @Body() createCommentDto: CreateCommentDto, @Request() req) {
+  addComment(@Param('id') id: string, @Body() createCommentDto: CreateCommentDto, @Request() req: any) {
     return this.defectsService.addComment(id, createCommentDto, req.user.id);
   }
 
@@ -89,7 +89,7 @@ export class DefectsController {
   addGlobalChat(
     @Param('id') id: string,
     @Body() createGlobalChatDto: CreateGlobalChatDto,
-    @Request() req,
+    @Request() req: any,
   ) {
     return this.defectsService.addGlobalDefectChat(
       id,
@@ -100,12 +100,12 @@ export class DefectsController {
   }
 
   @Post(':id/global-chat/mark-read')
-  markChatAsRead(@Param('id') id: string, @Request() req) {
+  markChatAsRead(@Param('id') id: string, @Request() req: any) {
     return this.defectsService.markChatAsRead(id, req.user.id);
   }
 
   @Get(':id/global-chat/unread-count')
-  getUnreadChatCount(@Param('id') id: string, @Request() req) {
+  getUnreadChatCount(@Param('id') id: string, @Request() req: any) {
     return this.defectsService.getUnreadChatCount(id, req.user.id);
   }
 

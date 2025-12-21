@@ -10,7 +10,7 @@ export class UsersController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getMe(@Request() req) {
+  async getMe(@Request() req: any) {
     return this.usersService.getMe(req.user.id);
   }
 
@@ -24,7 +24,7 @@ export class UsersController {
   // Get assignable users based on the requester's role
   @Get('assignable')
   @UseGuards(JwtAuthGuard)
-  async getAssignableUsers(@Request() req) {
+  async getAssignableUsers(@Request() req: any) {
     return this.usersService.getAssignableUsers(req.user.role);
   }
 

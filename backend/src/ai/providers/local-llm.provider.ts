@@ -112,13 +112,14 @@ Respond only with valid JSON, no additional text.`;
 
   private getFallbackRecommendations(context: DefectContext): AIRecommendation {
     // Provide generic recommendations based on priority
-    const priorityMap: Record<number, string> = {
-      1: 'Critical',
-      2: 'High',
-      3: 'Medium',
-      4: 'Low',
-    };
-    const priorityLabel = priorityMap[context.priority] || 'Medium';
+    // Priority label available for future use in recommendations
+    // const priorityMap: Record<number, string> = {
+    //   1: 'Critical',
+    //   2: 'High',
+    //   3: 'Medium',
+    //   4: 'Low',
+    // };
+    // const priorityLabel = priorityMap[context.priority] || 'Medium';
 
     return {
       root_cause_hypotheses: [

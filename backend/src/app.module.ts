@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
@@ -18,12 +18,18 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { CsrfInterceptor } from './common/interceptors/csrf.interceptor';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { RolesGuard } from './auth/guards/roles.guard';
+import { AppController } from './app.controller';
 
 @Module({
+  controllers: [AppController],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
+      cache: true,
     }),
     ThrottlerModule.forRoot([
       {
@@ -57,7 +63,15 @@ import { RolesGuard } from './auth/guards/roles.guard';
     },
     {
       provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
       useClass: CsrfInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
     },
   ],
 })

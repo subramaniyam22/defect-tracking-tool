@@ -1,8 +1,8 @@
-import { IsString, IsNumber, IsObject, IsOptional, IsArray } from 'class-validator';
+import { IsString, IsNumber, IsObject, IsOptional } from 'class-validator';
 
 export class StoreInsightsDto {
   @IsString()
-  scope: string;
+  scope!: string;
 
   @IsString()
   @IsOptional()
@@ -13,20 +13,20 @@ export class StoreInsightsDto {
   teamId?: string;
 
   @IsNumber()
-  reopen_rate: number;
+  reopen_rate!: number;
 
   @IsNumber()
-  mean_time_to_fix: number;
+  mean_time_to_fix!: number;
 
   @IsObject()
-  distributions: {
+  distributions!: {
     status: Record<string, number>;
     priority: Record<string, number>;
     project: Record<string, number>;
   };
 
   @IsObject()
-  clustering: {
+  clustering!: {
     clusters: Array<{
       cluster_id: number;
       size: number;

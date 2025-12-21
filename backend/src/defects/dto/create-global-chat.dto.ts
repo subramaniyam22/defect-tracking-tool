@@ -9,7 +9,7 @@ export enum GlobalChatType {
 export class CreateGlobalChatDto {
   @IsString()
   @IsNotEmpty()
-  message: string;
+  message!: string;
 
   @IsEnum(GlobalChatType)
   @IsOptional()

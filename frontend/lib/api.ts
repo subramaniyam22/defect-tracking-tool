@@ -13,10 +13,16 @@ const apiClient = axios.create({
 // Request interceptor to add access token
 apiClient.interceptors.request.use(
   (config) => {
-    if (typeof window !== 'undefined') {
-      const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
-        config.headers.Authorization = `Bearer ${accessToken}`;
+    // Only access localStorage if we're in the browser and the request needs auth
+    if (typeof window !== 'undefined' && !config.headers.Authorization) {
+      try {
+        const accessToken = localStorage.getItem('accessToken');
+        if (accessToken) {
+          config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+      } catch (e) {
+        // localStorage might not be available (e.g., in incognito mode with restrictions)
+        // Silently continue without token
       }
     }
     return config;
@@ -26,21 +32,62 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle token refresh
+// Helper function to handle session timeout and redirect
+const handleSessionTimeout = () => {
+  if (typeof window === 'undefined') return;
+  
+  // Clear all authentication data
+  try {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+  
+  // Only redirect if not already on login page
+  if (window.location.pathname !== '/login') {
+    // Use window.location.href for a hard redirect to ensure state is cleared
+    window.location.href = '/login';
+  }
+};
+
+// Response interceptor to handle token refresh and session timeout
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Don't retry login/refresh endpoints - these should fail normally
+    if (originalRequest?.url?.includes('/auth/login') || originalRequest?.url?.includes('/auth/refresh')) {
+      return Promise.reject(error);
+    }
+
+    // Handle 401 Unauthorized (session expired or invalid token)
+    if (error.response?.status === 401) {
+      // If this request already retried, don't retry again
+      if (originalRequest._retry) {
+        // Already tried to refresh, session is definitely expired
+        handleSessionTimeout();
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
+        let refreshToken: string | null = null;
+        try {
+          refreshToken = localStorage.getItem('refreshToken');
+        } catch (e) {
+          // localStorage might not be available
+        }
+        
         if (!refreshToken) {
-          throw new Error('No refresh token');
+          // No refresh token available, session expired
+          handleSessionTimeout();
+          return Promise.reject(error);
         }
 
+        // Try to refresh the token
         const response = await axios.post(
           `${API_URL}/auth/refresh`,
           { refreshToken },
@@ -48,21 +95,41 @@ apiClient.interceptors.response.use(
         );
 
         const { accessToken, refreshToken: newRefreshToken } = response.data;
-        localStorage.setItem('accessToken', accessToken);
-        if (newRefreshToken) {
-          localStorage.setItem('refreshToken', newRefreshToken);
+        try {
+          localStorage.setItem('accessToken', accessToken);
+          if (newRefreshToken) {
+            localStorage.setItem('refreshToken', newRefreshToken);
+          }
+        } catch (e) {
+          // localStorage might not be available, continue anyway
         }
 
+        // Retry the original request with new token
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed, redirect to login
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          window.location.href = '/login';
+      } catch (refreshError: any) {
+        // Refresh failed - token expired or invalid
+        // Check if it's a 401 (refresh token expired) or other error
+        if (refreshError.response?.status === 401 || refreshError.response?.status === 403) {
+          // Refresh token is also expired/invalid
+          handleSessionTimeout();
+        } else {
+          // Other error (network, server error, etc.)
+          // Still redirect to login as we can't authenticate
+          handleSessionTimeout();
         }
         return Promise.reject(refreshError);
+      }
+    }
+
+    // Handle network errors that might indicate backend is down
+    // But only if we have a token (meaning we were authenticated)
+    if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
+      const hasToken = typeof window !== 'undefined' && localStorage.getItem('accessToken');
+      if (hasToken && originalRequest?.url && !originalRequest.url.includes('/auth/')) {
+        // Network error on authenticated request - might be temporary
+        // Don't redirect immediately, let the error propagate
+        // The component can handle this appropriately
       }
     }
 

@@ -22,13 +22,27 @@ export default function LoginPage() {
         password,
       });
 
+      // Store tokens
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
 
-      router.push('/dashboard');
+      // Verify the token works by fetching user data before redirecting
+      try {
+        await authService.getMe();
+        // If successful, redirect to dashboard
+        router.push('/dashboard');
+        // Force a hard navigation to ensure state is reset
+        router.refresh();
+      } catch (verifyError: any) {
+        // If getMe fails, clear tokens and show error
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        setError('Login successful but failed to verify session. Please try again.');
+        setLoading(false);
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
-    } finally {
+      const errorMessage = err.response?.data?.message || err.message || 'Login failed. Please try again.';
+      setError(errorMessage);
       setLoading(false);
     }
   };

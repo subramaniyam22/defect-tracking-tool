@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+  
   constructor(private prisma: PrismaService) {}
 
   // Projects are now PMCs (Project Management Companies)
@@ -15,9 +17,17 @@ export class ProjectsService {
   }
 
   async findAll() {
-    return this.prisma.pMC.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+    try {
+      const projects = await this.prisma.pMC.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+      this.logger.log(`Found ${projects.length} projects`);
+      return projects;
+    } catch (error) {
+      this.logger.error('Error fetching projects:', error);
+      // Return empty array instead of throwing to prevent dashboard from breaking
+      return [];
+    }
   }
 
   async findOne(id: string) {

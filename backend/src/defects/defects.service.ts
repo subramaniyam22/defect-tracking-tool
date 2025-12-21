@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDefectDto } from './dto/create-defect.dto';
 import { UpdateDefectDto } from './dto/update-defect.dto';
@@ -7,6 +7,8 @@ import { AuditEventType, DefectStatus, Role } from '@prisma/client';
 
 @Injectable()
 export class DefectsService {
+  private readonly logger = new Logger(DefectsService.name);
+  
   constructor(private prisma: PrismaService) {}
 
   // Get PMC suggestions based on search query
@@ -145,7 +147,7 @@ export class DefectsService {
     });
 
     // Create multiple locations if provided (global defect)
-    if (hasMultipleLocations) {
+    if (hasMultipleLocations && createDefectDto.locationNames) {
       for (const locName of createDefectDto.locationNames) {
         // Create or get location
         let loc = await this.prisma.location.findFirst({
@@ -168,7 +170,7 @@ export class DefectsService {
     }
 
     // Create multiple assignees if provided (global defect)
-    if (hasMultipleAssignees) {
+    if (hasMultipleAssignees && createDefectDto.assignedToIds) {
       for (const assigneeId of createDefectDto.assignedToIds) {
         await this.prisma.defectAssignee.create({
           data: {
@@ -198,21 +200,48 @@ export class DefectsService {
   }
 
   async findAll(pmcName?: string, status?: DefectStatus, assignedToId?: string, createdById?: string) {
-    const where: any = {};
-    if (pmcName) where.pmcName = { contains: pmcName, mode: 'insensitive' };
-    if (status) where.status = status;
-    if (createdById) where.createdById = createdById;
-    
-    // For assignedToId, also check defectAssignees for global defects
-    if (assignedToId) {
-      where.OR = [
-        { assignedToId },
-        { defectAssignees: { some: { userId: assignedToId } } },
-      ];
-    }
+    try {
+      this.logger.log(`Finding defects with filters: pmcName=${pmcName}, status=${status}, assignedToId=${assignedToId}, createdById=${createdById}`);
+      
+      // Build where clause carefully to avoid Prisma query issues
+      const where: any = {};
+      
+      // Collect all filter conditions
+      const conditions: any[] = [];
+      
+      // Base filters
+      if (pmcName) {
+        conditions.push({ pmcName: { contains: pmcName, mode: 'insensitive' } });
+      }
+      if (status) {
+        conditions.push({ status });
+      }
+      if (createdById) {
+        conditions.push({ createdById });
+      }
+      
+      // For assignedToId, also check defectAssignees for global defects
+      if (assignedToId) {
+        conditions.push({
+          OR: [
+            { assignedToId },
+            { defectAssignees: { some: { userId: assignedToId } } },
+          ],
+        });
+      }
+      
+      // Apply conditions
+      if (conditions.length === 1) {
+        Object.assign(where, conditions[0]);
+      } else if (conditions.length > 1) {
+        where.AND = conditions;
+      }
+      // If no conditions, where will be empty object which is fine for Prisma
 
-    return this.prisma.defect.findMany({
-      where,
+      this.logger.debug(`Where clause: ${JSON.stringify(where)}`);
+
+      const defects = await this.prisma.defect.findMany({
+        where,
       include: {
         pmc: {
           select: {
@@ -275,7 +304,14 @@ export class DefectsService {
         },
       },
       orderBy: { createdAt: 'desc' },
-    });
+      });
+      
+      this.logger.log(`Found ${defects.length} defects`);
+      return defects;
+    } catch (error: any) {
+      this.logger.error(`Error finding defects: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async findOne(id: string) {
@@ -386,7 +422,7 @@ export class DefectsService {
       const allowedFields = ['status'];
       const updateFields = Object.keys(updateDefectDto);
       const hasDisallowedFields = updateFields.some(
-        (field) => !allowedFields.includes(field) && updateDefectDto[field] !== undefined
+        (field) => !allowedFields.includes(field) && (updateDefectDto as any)[field] !== undefined
       );
       
       if (hasDisallowedFields) {
@@ -972,7 +1008,7 @@ export class DefectsService {
     }
 
     // Capitalize first letter of sentences
-    refined = refined.replace(/(^|[.!?]\s+)([a-z])/g, (match, separator, letter) => 
+    refined = refined.replace(/(^|[.!?]\s+)([a-z])/g, (_match, separator, letter) => 
       separator + letter.toUpperCase()
     );
 

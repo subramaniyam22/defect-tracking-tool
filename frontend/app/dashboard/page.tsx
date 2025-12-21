@@ -99,9 +99,19 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      // Check if we have a token before making the request
+      if (typeof window === 'undefined') return;
+      
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
       try {
         const userData = await authService.getMe();
         setUser(userData);
+        setLoading(false);
         
         // Fetch AI suggestions for the user
         try {
@@ -121,8 +131,13 @@ export default function DashboardPage() {
           console.error('Failed to load AI suggestions:', e);
         }
       } catch (err: any) {
+        console.error('Failed to load user data:', err);
         setError(err.response?.data?.message || 'Failed to load user data');
+        // Only redirect if it's a 401 and we don't have a token refresh happening
         if (err.response?.status === 401) {
+          // Clear tokens and redirect
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
           router.push('/login');
         }
       }

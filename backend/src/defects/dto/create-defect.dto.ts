@@ -5,12 +5,12 @@ export class CreateDefectDto {
   @IsString()
   @IsNotEmpty()
   @Length(1, 200, { message: 'Title must be between 1 and 200 characters' })
-  title: string;
+  title!: string;
 
   @IsString()
   @IsNotEmpty()
   @Length(1, 5000, { message: 'Description must be between 1 and 5000 characters' })
-  description: string;
+  description!: string;
 
   @IsEnum(DefectStatus)
   @IsOptional()
@@ -28,7 +28,7 @@ export class CreateDefectDto {
 
   @IsString()
   @IsNotEmpty({ message: 'PMC name is required' })
-  pmcName: string;
+  pmcName!: string;
 
   @IsString()
   @IsOptional()

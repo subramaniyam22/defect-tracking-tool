@@ -216,25 +216,11 @@ export default function AdminPage() {
 
       const records = recordsRes.data;
       setUserRecords(records);
-      
-      if (records.assignedDefects > 0 || records.hasHistoricalRecords) {
-        // Show modal with reassignment option
-        setUserToDelete(user);
-        setAssignedDefectsCount(records.assignedDefects);
-        setSameRoleUsers(usersRes.data);
-        setReassignToId(records.assignedDefects === 0 ? 'BACKLOG' : '');
-        setShowDeleteModal(true);
-      } else {
-        // No records, confirm and delete directly
-        if (!confirm(`Are you sure you want to delete user "${user.username}"? This action cannot be undone.`)) {
-          return;
-        }
-        await apiClient.delete(`/users/${user.id}`, {
-          data: { reassignToId: 'BACKLOG' },
-        });
-        setSuccess('User deleted successfully');
-        await fetchUsers();
-      }
+      setUserToDelete(user);
+      setAssignedDefectsCount(records.assignedDefects);
+      setSameRoleUsers(usersRes.data);
+      setReassignToId(records.assignedDefects === 0 ? 'BACKLOG' : '');
+      setShowDeleteModal(true);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to delete user');
     }
@@ -566,17 +552,25 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal with Reassignment */}
+      {/* Delete Confirmation Modal with User Details */}
       {showDeleteModal && userToDelete && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Delete User
-              </h3>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-lg shadow-xl rounded-lg bg-white">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Delete User
+                </h3>
+              </div>
               <button
                 onClick={handleCancelDelete}
-                className="text-gray-400 hover:text-gray-500"
+                className="text-gray-400 hover:text-gray-500 transition-colors"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -584,41 +578,82 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <div className="mb-4">
+            {/* User Details Section */}
+            <div className="p-6">
+              <div className="mb-6">
+                <p className="text-sm font-medium text-gray-700 mb-4">User Details:</p>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center mr-4">
+                      <span className="text-lg font-semibold text-indigo-600">
+                        {(userToDelete.fullName || userToDelete.username).charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-base font-semibold text-gray-900">
+                        {userToDelete.fullName || userToDelete.username}
+                      </p>
+                      <p className="text-sm text-gray-500">{userToDelete.email || userToDelete.username}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-200">
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Username</p>
+                      <p className="text-sm text-gray-900">{userToDelete.username}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Role</p>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${roleColors[userToDelete.role] || 'bg-gray-100 text-gray-800'}`}>
+                        {roleLabels[userToDelete.role] || userToDelete.role}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        userToDelete.isActive
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {userToDelete.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Created</p>
+                      <p className="text-sm text-gray-900">{new Date(userToDelete.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* User Records Summary */}
               {userRecords && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm font-medium text-gray-800 mb-2">User Records Summary:</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {userRecords.assignedDefects > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Assigned Defects:</span>
-                        <span className="font-medium text-orange-600">{userRecords.assignedDefects}</span>
-                      </div>
-                    )}
-                    {userRecords.createdDefects > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Created Defects:</span>
-                        <span className="font-medium">{userRecords.createdDefects}</span>
-                      </div>
-                    )}
-                    {userRecords.comments > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Comments:</span>
-                        <span className="font-medium">{userRecords.comments}</span>
-                      </div>
-                    )}
-                    {userRecords.attachments > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Attachments:</span>
-                        <span className="font-medium">{userRecords.attachments}</span>
-                      </div>
-                    )}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm font-medium text-blue-900 mb-3">User Activity Summary:</p>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-700">Assigned Defects:</span>
+                      <span className="font-semibold text-blue-900">{userRecords.assignedDefects}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-700">Created Defects:</span>
+                      <span className="font-semibold text-blue-900">{userRecords.createdDefects}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-700">Comments:</span>
+                      <span className="font-semibold text-blue-900">{userRecords.comments}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-700">Attachments:</span>
+                      <span className="font-semibold text-blue-900">{userRecords.attachments}</span>
+                    </div>
                   </div>
                   {userRecords.hasHistoricalRecords && (
-                    <p className="text-xs text-blue-600 mt-2">
-                      ℹ️ Historical records will be transferred to admin for data preservation.
-                    </p>
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <p className="text-xs text-blue-700">
+                        <span className="font-medium">ℹ️ Note:</span> Historical records (created defects, comments, audit events, attachments) will be automatically transferred to an admin user for data preservation.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
@@ -626,34 +661,38 @@ export default function AdminPage() {
               {assignedDefectsCount > 0 && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                   <div className="flex items-start">
-                    <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
                     <div>
                       <p className="text-sm font-medium text-yellow-800">
-                        User has {assignedDefectsCount} assigned defect{assignedDefectsCount !== 1 ? 's' : ''}
+                        This user has {assignedDefectsCount} assigned defect{assignedDefectsCount !== 1 ? 's' : ''}
                       </p>
                       <p className="text-sm text-yellow-700 mt-1">
-                        Choose what to do with these defects before deleting this user.
+                        You must choose what to do with these defects before deleting this user.
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              <p className="text-sm text-gray-600 mb-4">
-                Delete user <strong>{userToDelete.fullName || userToDelete.username}</strong>?
-              </p>
+              {/* Warning Message */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-red-800">
+                  <span className="font-semibold">⚠️ Warning:</span> This action cannot be undone. The user will be permanently deleted from the system.
+                </p>
+              </div>
 
+              {/* Reassignment Options */}
               {assignedDefectsCount > 0 ? (
-                <div>
+                <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     What to do with assigned defects: *
                   </label>
                   <select
                     value={reassignToId}
                     onChange={(e) => setReassignToId(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                     required
                   >
                     <option value="">Select an option...</option>
@@ -677,25 +716,27 @@ export default function AdminPage() {
                   </p>
                 </div>
               ) : (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-800">
-                    This user has no assigned defects. Click delete to proceed.
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-green-800">
+                    ✓ This user has no assigned defects. Safe to delete.
                   </p>
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                  <p className="text-red-800 text-sm">{error}</p>
                 </div>
               )}
             </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                <p className="text-red-800 text-sm">{error}</p>
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-3">
+            {/* Footer with Actions */}
+            <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
               <button
                 type="button"
                 onClick={handleCancelDelete}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                disabled={submitting}
+                className="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Cancel
               </button>
@@ -703,7 +744,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={submitting || (assignedDefectsCount > 0 && !reassignToId)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-md text-sm font-medium"
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
               >
                 {submitting 
                   ? 'Deleting...' 

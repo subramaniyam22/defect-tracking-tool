@@ -4,7 +4,7 @@ export class CreateProjectDto {
   @IsString()
   @IsNotEmpty({ message: 'Project name is required' })
   @Length(1, 100, { message: 'Project name must be between 1 and 100 characters' })
-  name: string;
+  name!: string;
 
   @IsString()
   @IsOptional()

@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAttachmentDto } from './dto/create-attachment.dto';
 import { AVScannerService } from '../common/services/av-scanner.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -11,8 +10,9 @@ export class AttachmentsService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
-    private avScanner: AVScannerService,
+    private readonly avScanner: AVScannerService,
   ) {}
+
 
   async createPresignedUploadUrl(
     defectId: string,
@@ -185,6 +185,10 @@ export class AttachmentsService {
       const randomStr = Math.random().toString(36).substring(2, 15);
       const fileExtension = file.originalname.split('.').pop();
       const fileKey = `defects/${defectId}/${timestamp}-${randomStr}.${fileExtension}`;
+
+      // TODO: Implement antivirus scanning using this.avScanner
+      // Reserved for future implementation: await this.avScanner.scan(file.buffer);
+      void this.avScanner;
 
       // Save file to disk
       const filePath = path.join(uploadsDir, `${timestamp}-${randomStr}.${fileExtension}`);
