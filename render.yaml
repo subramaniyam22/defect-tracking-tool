@@ -3,9 +3,9 @@
 # Render will auto-detect this file and create all services
 
 databases:
-  # PostgreSQL Database
+  # PostgreSQL Database - Starter plan ($7/month)
   - name: defect-tracking-db
-    plan: free # Use 'starter' for production
+    plan: starter
     databaseName: defect_tracking
     user: defect_user
     region: oregon
